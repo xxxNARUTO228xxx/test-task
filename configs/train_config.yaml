@@ -1,0 +1,22 @@
+target: 
+  - target_labor_min
+  - target_unit_price_rub
+artifacts_dir: artifacts
+mlruns_dir: mlruns
+seed: 42
+experiment: catboost_regression
+
+thresholds:
+  missing_threshold: 0.5
+  corr_threshold: 0.95
+
+split:
+  train: 0.7
+  valid: 0.15
+  test: 0.15
+
+optuna:
+  enable: true
+  n_trials: 20
+  timeout: null
+  early_stopping_rounds: 200
