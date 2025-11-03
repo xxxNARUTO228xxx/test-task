@@ -58,7 +58,6 @@ def infer_feature_types(df: pd.DataFrame, target_column: str | List[str]) -> Tup
     Returns:
         Tuple[List[str], List[str]]: Списки числовых и категориальных фичей
     """
-    # Поддерживаем как один таргет, так и список таргетов
     if isinstance(target_column, str):
         target_columns = [target_column]
     else:

@@ -1,6 +1,7 @@
 from typing import Dict, List, Tuple
 import argparse
 import os
+from pathlib import Path
 from datetime import datetime
 import mlflow
 import numpy as np
@@ -76,7 +77,7 @@ def build_pools(
     
     for cat_col in cat_feature_names:
         if cat_col in X.columns:
-            X[cat_col] = X[cat_col].fillna("None")
+            X[cat_col] = X[cat_col].fillna("_None_")
     
     cat_indices = [feature_order.index(c) for c in cat_feature_names]
     return Pool(X, y, cat_features=cat_indices)
@@ -131,15 +132,13 @@ def main() -> None:
         corr_threshold=corr_threshold,
     )
 
-    # Генерируем имя модели на основе даты (например: catboost-regressor-20251101)
     model_name = f"catboost-regressor-{datetime.now().strftime('%Y%m%d')}"
-    
-    # Создаем поддиректорию для модели в artifacts_dir
     model_artifacts_dir = os.path.join(artifacts_dir, model_name)
     ensure_dir(model_artifacts_dir)
 
     # Логирование в MLflow
-    mlflow.set_tracking_uri(f"file://{os.path.abspath(mlruns_dir)}")
+    mlruns_path = Path(os.path.abspath(mlruns_dir))
+    mlflow.set_tracking_uri(mlruns_path.as_uri())
     experiment_name = cfg.get("experiment", model_name)
     if is_multi_target:
         experiment_name = f"{experiment_name}_multitarget"

@@ -11,7 +11,7 @@ from src.inference.model import ModelService
 
 # Список моделей для загрузки при старте сервиса
 MODELS: List[str] = [
-    "catboost-regressor-20251102",
+    "catboost-regressor-20251103",
 ]
 
 
@@ -31,12 +31,12 @@ def health() -> dict:
     return {"status": "ok"}
 
 
-@app.post("/catboost-regressor-20251102", response_model=PredictResponse)
-def catboost_regressor_20251102(req: PredictRequest) -> PredictResponse:
-    """Эндпойнт для предсказания модели catboost-regressor-20251102."""
+@app.post("/catboost-regressor-20251103", response_model=PredictResponse)
+def catboost_regressor_20251103(req: PredictRequest) -> PredictResponse:
+    """Эндпойнт для предсказания модели catboost-regressor-20251103."""
     request_id = uuid4()
     timestamp = datetime.now().isoformat()
-    preds = _service.predict("catboost-regressor-20251102", [req.features])
+    preds = _service.predict("catboost-regressor-20251103", [req.features])
     return PredictResponse(
         request_id=request_id,
         timestamp=timestamp,

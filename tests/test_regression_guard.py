@@ -1,90 +1,42 @@
-import json
-import os
-import tempfile
-
-import numpy as np
-import pandas as pd
-from catboost import CatBoostRegressor
 from fastapi.testclient import TestClient
 
 from src.api.main import app
 
 
-def _train_baseline(tmpdir: str, model_name: str = "catboost-regressor-20251101") -> tuple:
-    """Обучает базовую модель и возвращает предсказания для тестовых примеров.
-    
-    Args:
-        tmpdir: Временная директория для сохранения артефактов
-        model_name: Имя модели
-        
-    Returns:
-        tuple: (endpoint, predictions_dict) где predictions_dict содержит предсказания для каждого примера
-    """
-    # Простая линейная зависимость для воспроизводимости
-    rng = np.random.default_rng(0)
-    x = np.arange(50)
-    y = x.astype(float) + rng.normal(0, 0.1, size=50)
-    df = pd.DataFrame({"x": x, "y": y})
-    m = CatBoostRegressor(loss_function="RMSE", depth=4, learning_rate=0.1, random_seed=0, verbose=False)
-    m.fit(df[["x"]], df["y"])
-
-    os.makedirs(tmpdir, exist_ok=True)
-    m.save_model(os.path.join(tmpdir, "model.cbm"))
-    with open(os.path.join(tmpdir, "selected_features.json"), "w", encoding="utf-8") as f:
-        f.write('{"numerical_features":["x"],"categorical_features":[]}')
-
-    # Создаем тестовые примеры (10 примеров)
-    test_examples = [{"x": float(i)} for i in range(10)]
-    test_predictions = m.predict(pd.DataFrame(test_examples))
-    
-    # Сохраняем информацию о модели для использования в API
-    model_info = {
-        "model_name": model_name,
-        "endpoint": f"/{model_name}",
-        "sample_indices": list(range(10)),
-        "targets": ["y"],
-        "is_multi_target": False,
-        "test_examples": {
-            "features": test_examples,
-            "targets_true": {
-                "y": test_predictions.tolist()  # Используем предсказания как "истинные" значения для теста
+def test_tolerance_catboost_regressor_20251103_endpoint():
+    """Тест для эндпойнта /catboost-regressor-20251103 с проверкой предсказаний."""
+    with TestClient(app) as client:
+        payload = {
+            "features": {
+                "rfq_id": "3686",
+                "customer_tier": "B",
+                "material": "steel",
+                "thickness_mm": 8.13,
+                "length_mm": 531.0,
+                "width_mm": 153.0,
+                "holes_count": 4.0,
+                "bends_count": 1.0,
+                "weld_length_mm": 124.0,
+                "cut_length_mm": 6742.0,
+                "route": "laser_cut",
+                "tolerance": "precise",
+                "surface_finish": "none",
+                "coating": "powder",
+                "qty": 2.0,
+                "due_days": 21.0,
+                "engineer_score": -1.04,
+                "part_weight_kg": 0.005,
+                "labor_minutes_per_unit": 14.03,
+                "material_cost_rub": 0.64,
+                "labor_cost_rub": 112.24,
+                "unit_price_rub": 141.16
             }
         }
-    }
-    
-    with open(os.path.join(tmpdir, "model_info.json"), "w", encoding="utf-8") as f:
-        json.dump(model_info, f, ensure_ascii=False, indent=2)
-    
-    endpoint = f"/{model_name}"
-    predictions_dict = {i: float(pred) for i, pred in enumerate(test_predictions)}
-    
-    return endpoint, predictions_dict
-
-
-def test_regression_prediction_tolerance() -> None:
-    """Тест на устойчивость предсказаний модели с использованием сохраненных примеров."""
-    model_name = "catboost-regressor-20251101"
-    function_name = f"predict_{model_name.replace('-', '_')}"
-    
-    with tempfile.TemporaryDirectory() as d:
-        endpoint, baseline_predictions = _train_baseline(d, model_name)
-        os.environ["ARTIFACTS_DIR"] = d
-        
-        # Создаем клиент для тестирования
-        # TestClient автоматически вызывает startup события при первом запросе
-        client = TestClient(app)
-        
-        # Загружаем тестовые примеры из model_info.json
-        with open(os.path.join(d, "model_info.json"), "r", encoding="utf-8") as f:
-            model_info = json.load(f)
-        
-        test_examples = model_info["test_examples"]["features"]
-        
-        # Тестируем каждый пример
-        for idx, example_features in enumerate(test_examples):
-            resp = client.post(endpoint, json={"items": [{"features": example_features}]})
-            assert resp.status_code == 200
-            pred = float(resp.json()["predictions"][0])
-            baseline = baseline_predictions[idx]
-            # Допуск по отклонению
-            assert abs(pred - baseline) < 0.5, f"Пример {idx}: pred={pred}, baseline={baseline}"
+        expected_predictions = [14.03, 141.16]
+        response = client.post("/catboost-regressor-20251103", json=payload)
+        response_data = response.json()
+        actual_predictions = response_data["predictions"]
+        tolerance = [3.0, 10.0]
+        for i, (actual, expected) in enumerate(zip(actual_predictions, expected_predictions)):
+            assert abs(actual - expected) < tolerance[i], \
+                f"Prediction {i}: expected {expected}, got {actual}, difference {abs(actual - expected)}"

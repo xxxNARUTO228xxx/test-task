@@ -106,10 +106,10 @@ class ModelService:
         X = pd.DataFrame(rows, columns=model_info.feature_order)
         
         # Обрабатываем None значения: для категориальных фичей преобразуем None в строку "None"
-        # Это соответствует обработке при обучении (build_pools использует fillna("None"))
+        # Это соответствует обработке при обучении (build_pools использует fillna("_None_"))
         for cat_col in model_info.categorical_features:
             if cat_col in X.columns:
-                X[cat_col] = X[cat_col].fillna("None")
+                X[cat_col] = X[cat_col].fillna("_None_")
         
         preds = model_info.model.predict(X)
         

@@ -11,7 +11,7 @@ pip install -r requirements.txt
 ## Обучение
 
 ```bash
-python -m src.train.train --data /path/to/data.csv --config configs/train_config.yaml
+python -m src.train.train --data /path/to/data.csv --config configs/config.yaml
 ```
 - Артефакты сохраняются в `artifacts/`: `model.cbm`, `selected_features.json`, `dropped_features.json`.
 - Логи MLflow в `mlruns/`. Запуск UI:
